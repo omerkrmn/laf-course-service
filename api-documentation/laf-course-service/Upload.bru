@@ -1,0 +1,16 @@
+meta {
+  name: Upload
+  type: http
+  seq: 4
+}
+
+post {
+  url: http://localhost:5096/api/videos/upload
+  body: multipartForm
+  auth: inherit
+}
+
+body:multipart-form {
+  uploadedBy: asdasdsad
+  videoFile: @file(C:\Users\omerkrmn\Videos\Counter-strike 2\Counter-strike 2 2026.09.27 - 02.30.42.09.DVR.mp4)
+}

@@ -1,0 +1,15 @@
+meta {
+  name: Open Video
+  type: http
+  seq: 5
+}
+
+get {
+  url: http://localhost:5096/api/videos/{{videoId}}/manifest.m3u8
+  body: none
+  auth: inherit
+}
+
+vars:pre-request {
+  videoId: 42e82604-1110-44e3-9eb6-e04a85deb88a
+}
