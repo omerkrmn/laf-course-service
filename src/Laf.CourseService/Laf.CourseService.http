@@ -1,0 +1,38 @@
+@HostAddress = http://localhost:5000
+
+### 1. Root Service Info
+GET {{HostAddress}}/
+Accept: application/json
+
+### 2. List Videos
+GET {{HostAddress}}/api/videos?page=1&pageSize=20
+Accept: application/json
+
+### 3. Upload Video (Multipart Form)
+POST {{HostAddress}}/api/videos/upload
+Content-Type: multipart/form-data; boundary=boundary
+
+--boundary
+Content-Disposition: form-data; name="uploadedBy"
+
+Instructor_John
+--boundary
+Content-Disposition: form-data; name="videoFile"; filename="sample_lesson.mp4"
+Content-Type: video/mp4
+
+< ./sample_lesson.mp4
+--boundary--
+
+### 4. Get Video Status & Metadata (Replace with actual GUID)
+@videoId = 00000000-0000-0000-0000-000000000000
+GET {{HostAddress}}/api/videos/{{videoId}}
+Accept: application/json
+
+### 5. Stream HLS Master Manifest
+GET {{HostAddress}}/api/videos/{{videoId}}/manifest.m3u8
+
+### 6. Get Video Thumbnail
+GET {{HostAddress}}/api/videos/{{videoId}}/thumbnail
+
+### 7. Delete Video
+DELETE {{HostAddress}}/api/videos/{{videoId}}
