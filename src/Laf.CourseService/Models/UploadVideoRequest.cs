@@ -4,6 +4,7 @@ public class UploadVideoRequest
 {
     public IFormFile VideoFile { get; set; } = null!;
     public string? UploadedBy { get; set; }
+    public string? UploaderId { get; set; }
 }
 
 public class VideoUploadAcceptedResponse

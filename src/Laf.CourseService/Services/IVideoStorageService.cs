@@ -15,4 +15,5 @@ public interface IVideoStorageService
     bool ThumbnailExists(Guid videoId);
     void CleanupTempFile(Guid videoId);
     void DeleteProcessedHls(Guid videoId);
+    void DeleteAll();
 }

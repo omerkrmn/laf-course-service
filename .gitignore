@@ -426,3 +426,7 @@ FodyWeavers.xsd
 
 # Official VS Code C# Dev Kit Extension exclusion
 #*.lscache
+
+# Video & media storage directory
+src/Laf.CourseService/Storage/
+**/Laf.CourseService/Storage/

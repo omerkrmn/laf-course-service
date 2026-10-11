@@ -20,6 +20,7 @@ public static class VideoEndpoints
             HttpRequest request,
             [FromForm] IFormFile? videoFile,
             [FromForm] string? uploadedBy,
+            [FromForm] string? uploaderId,
             MediaDbContext dbContext,
             IVideoStorageService storageService,
             VideoProcessingQueue queue,
@@ -37,6 +38,11 @@ public static class VideoEndpoints
             if (string.IsNullOrEmpty(uploadedBy) && request.HasFormContentType && request.Form.TryGetValue("uploadedBy", out var uploadedByVal))
             {
                 uploadedBy = uploadedByVal.ToString();
+            }
+
+            if (string.IsNullOrEmpty(uploaderId) && request.HasFormContentType && request.Form.TryGetValue("uploaderId", out var uploaderIdVal))
+            {
+                uploaderId = uploaderIdVal.ToString();
             }
 
             if (videoFile == null || videoFile.Length == 0)
@@ -74,6 +80,7 @@ public static class VideoEndpoints
                 ContentType = string.IsNullOrWhiteSpace(videoFile.ContentType) ? "video/mp4" : videoFile.ContentType,
                 FileSizeBytes = videoFile.Length,
                 UploadedBy = string.IsNullOrWhiteSpace(uploadedBy) ? "Anonymous" : uploadedBy.Trim(),
+                UploaderId = string.IsNullOrWhiteSpace(uploaderId) ? string.Empty : uploaderId.Trim(),
                 Status = VideoProcessingStatus.Pending,
                 CreatedAt = DateTime.UtcNow
             };
@@ -253,7 +260,29 @@ public static class VideoEndpoints
         .Produces(StatusCodes.Status200OK, contentType: "image/jpeg")
         .Produces(StatusCodes.Status404NotFound);
 
-        // 7. Delete Video
+        // 7. Delete All Videos (Maintenance / Test)
+        group.MapDelete("/all", async (
+            MediaDbContext dbContext,
+            IVideoStorageService storageService,
+            CancellationToken cancellationToken) =>
+        {
+            // Clear physical temp files and HLS processed folders
+            storageService.DeleteAll();
+
+            // Clear database records
+            var deletedCount = await dbContext.Videos.ExecuteDeleteAsync(cancellationToken);
+
+            return Results.Ok(new
+            {
+                message = "All videos and associated files deleted successfully.",
+                deletedCount
+            });
+        })
+        .WithName("DeleteAllVideos")
+        .WithSummary("Deletes all videos and removes physical temporary and processed HLS storage files.")
+        .Produces(StatusCodes.Status200OK);
+
+        // 8. Delete Video
         group.MapDelete("/{id:guid}", async (
             Guid id,
             MediaDbContext dbContext,

@@ -24,6 +24,7 @@ public class MediaDbContext : DbContext
             entity.Property(e => e.VideoCodec).HasMaxLength(50);
             entity.Property(e => e.AudioCodec).HasMaxLength(50);
             entity.Property(e => e.UploadedBy).HasMaxLength(100);
+            entity.Property(e => e.UploaderId).HasMaxLength(100);
             entity.Property(e => e.HlsMasterPlaylistPath).HasMaxLength(500);
             entity.Property(e => e.ThumbnailPath).HasMaxLength(500);
 

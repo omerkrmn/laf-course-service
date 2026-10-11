@@ -15,6 +15,7 @@ public class VideoResponseDto
     public long Bitrate { get; set; }
     public double FrameRate { get; set; }
     public string UploadedBy { get; set; } = string.Empty;
+    public string UploaderId { get; set; } = string.Empty;
     public VideoProcessingStatus Status { get; set; }
     public string StatusText => Status.ToString();
     public string? ErrorMessage { get; set; }
@@ -48,6 +49,7 @@ public class VideoResponseDto
             Bitrate = entity.Bitrate,
             FrameRate = entity.FrameRate,
             UploadedBy = entity.UploadedBy,
+            UploaderId = entity.UploaderId ?? string.Empty,
             Status = entity.Status,
             ErrorMessage = entity.ErrorMessage,
             ManifestUrl = manifestUrl,

@@ -133,4 +133,70 @@ public class VideoStorageService : IVideoStorageService
             }
         }
     }
+
+    public void DeleteAll()
+    {
+        EnsureDirectoriesCreated();
+
+        // 1. Delete all temporary files
+        try
+        {
+            if (Directory.Exists(_tempUploadsPath))
+            {
+                var files = Directory.GetFiles(_tempUploadsPath);
+                foreach (var file in files)
+                {
+                    try
+                    {
+                        File.Delete(file);
+                    }
+                    catch
+                    {
+                        // Best effort cleanup
+                    }
+                }
+            }
+        }
+        catch
+        {
+            // Best effort cleanup
+        }
+
+        // 2. Delete all processed HLS folders and root files
+        try
+        {
+            if (Directory.Exists(_processedHlsPath))
+            {
+                var dirs = Directory.GetDirectories(_processedHlsPath);
+                foreach (var dir in dirs)
+                {
+                    try
+                    {
+                        Directory.Delete(dir, recursive: true);
+                    }
+                    catch
+                    {
+                        // Best effort cleanup
+                    }
+                }
+
+                var files = Directory.GetFiles(_processedHlsPath);
+                foreach (var file in files)
+                {
+                    try
+                    {
+                        File.Delete(file);
+                    }
+                    catch
+                    {
+                        // Best effort cleanup
+                    }
+                }
+            }
+        }
+        catch
+        {
+            // Best effort cleanup
+        }
+    }
 }

@@ -57,9 +57,15 @@ using (var scope = app.Services.CreateScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<MediaDbContext>();
     dbContext.Database.EnsureCreated();
+    try
+    {
+        dbContext.Database.ExecuteSqlRaw("ALTER TABLE Videos ADD COLUMN UploaderId TEXT DEFAULT '';");
+    }
+    catch
+    {
+        // Column already exists, safe to ignore
+    }
 }
-
-if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
 }

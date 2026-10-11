@@ -7,7 +7,7 @@ public enum VideoProcessingStatus
     Completed = 2,
     Failed = 3
 }
-
+// video metadata bilgileri 
 public class VideoMetadata
 {
     public Guid Id { get; set; }
@@ -23,6 +23,7 @@ public class VideoMetadata
     public long Bitrate { get; set; }
     public double FrameRate { get; set; } // e.g. 29.97, 60.0
     public string UploadedBy { get; set; } = string.Empty;
+    public string UploaderId { get; set; } = string.Empty;
     public VideoProcessingStatus Status { get; set; } = VideoProcessingStatus.Pending;
     public string? ErrorMessage { get; set; }
     public string HlsMasterPlaylistPath { get; set; } = string.Empty;
