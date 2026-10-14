@@ -79,6 +79,21 @@ public class VideoStorageService : IVideoStorageService
         return Path.Combine(GetProcessedHlsDirectory(videoId), "thumbnail.jpg");
     }
 
+    public async Task<string> SaveCustomThumbnailAsync(Guid videoId, IFormFile file, CancellationToken cancellationToken = default)
+    {
+        EnsureDirectoriesCreated();
+        var hlsDir = GetProcessedHlsDirectory(videoId);
+        if (!Directory.Exists(hlsDir))
+        {
+            Directory.CreateDirectory(hlsDir);
+        }
+
+        var targetPath = GetThumbnailPath(videoId);
+        await using var stream = new FileStream(targetPath, FileMode.Create, FileAccess.Write, FileShare.None, 81920, useAsync: true);
+        await file.CopyToAsync(stream, cancellationToken);
+        return targetPath;
+    }
+
     public string GetSegmentPath(Guid videoId, string segmentFileName)
     {
         // Sanitize segment file name to avoid directory traversal

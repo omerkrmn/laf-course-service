@@ -3,6 +3,7 @@ namespace Laf.CourseService.Models;
 public class UploadVideoRequest
 {
     public IFormFile VideoFile { get; set; } = null!;
+    public IFormFile? ThumbnailFile { get; set; }
     public string? UploadedBy { get; set; }
     public string? UploaderId { get; set; }
 }

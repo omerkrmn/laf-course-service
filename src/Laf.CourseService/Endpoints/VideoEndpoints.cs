@@ -20,6 +20,7 @@ public static class VideoEndpoints
         group.MapPost("/upload", async (
             HttpRequest request,
             [FromForm] IFormFile? videoFile,
+            [FromForm] IFormFile? thumbnailFile,
             [FromForm] string? uploadedBy,
             [FromForm] string? uploaderId,
             MediaDbContext dbContext,
@@ -30,10 +31,16 @@ public static class VideoEndpoints
         {
             var options = storageOptions.Value;
 
-            // Fallback checking if file is inside request.Form.Files
+            // Fallback checking if video is inside request.Form.Files
             if (videoFile == null && request.HasFormContentType && request.Form.Files.Count > 0)
             {
                 videoFile = request.Form.Files["videoFile"] ?? request.Form.Files[0];
+            }
+
+            // Fallback checking if thumbnail is inside request.Form.Files
+            if (thumbnailFile == null && request.HasFormContentType)
+            {
+                thumbnailFile = request.Form.Files["thumbnailFile"] ?? request.Form.Files["thumbnail"];
             }
 
             if (string.IsNullOrEmpty(uploadedBy) && request.HasFormContentType && request.Form.TryGetValue("uploadedBy", out var uploadedByVal))
@@ -70,6 +77,28 @@ public static class VideoEndpoints
 
             var videoId = Guid.NewGuid();
 
+            // Handle optional custom thumbnail uploaded by user
+            string? customThumbnailPath = null;
+            if (thumbnailFile != null && thumbnailFile.Length > 0)
+            {
+                var thumbExt = Path.GetExtension(thumbnailFile.FileName).ToLowerInvariant();
+                var allowedImageExts = new[] { ".jpg", ".jpeg", ".png", ".webp" };
+                if (!allowedImageExts.Contains(thumbExt))
+                {
+                    return Results.BadRequest(new
+                    {
+                        error = $"Unsupported thumbnail image extension '{thumbExt}'. Allowed: {string.Join(", ", allowedImageExts)}"
+                    });
+                }
+
+                if (thumbnailFile.Length > 10 * 1024 * 1024)
+                {
+                    return Results.BadRequest(new { error = "Thumbnail file size exceeds the 10 MB limit." });
+                }
+
+                customThumbnailPath = await storageService.SaveCustomThumbnailAsync(videoId, thumbnailFile, cancellationToken);
+            }
+
             // Save raw upload to temp folder
             await storageService.SaveTemporaryUploadAsync(videoId, videoFile, cancellationToken);
 
@@ -83,6 +112,7 @@ public static class VideoEndpoints
                 UploadedBy = string.IsNullOrWhiteSpace(uploadedBy) ? "Anonymous" : uploadedBy.Trim(),
                 UploaderId = string.IsNullOrWhiteSpace(uploaderId) ? string.Empty : uploaderId.Trim(),
                 Status = VideoProcessingStatus.Pending,
+                ThumbnailPath = customThumbnailPath ?? string.Empty,
                 CreatedAt = DateTime.UtcNow
             };
 
@@ -107,9 +137,59 @@ public static class VideoEndpoints
         })
         .DisableAntiforgery()
         .WithName("UploadVideo")
-        .WithSummary("Uploads a video file and starts asynchronous HLS transcoding.")
+        .WithSummary("Uploads a video file with an optional custom thumbnail, and starts asynchronous HLS transcoding.")
         .Produces<VideoUploadAcceptedResponse>(StatusCodes.Status202Accepted)
         .Produces(StatusCodes.Status400BadRequest);
+
+        // 1.1 Update/Set Custom Thumbnail for an Existing Video
+        group.MapPut("/{id:guid}/thumbnail", async (
+            Guid id,
+            HttpRequest request,
+            [FromForm] IFormFile? thumbnailFile,
+            MediaDbContext dbContext,
+            IVideoStorageService storageService,
+            CancellationToken cancellationToken) =>
+        {
+            if (thumbnailFile == null && request.HasFormContentType && request.Form.Files.Count > 0)
+            {
+                thumbnailFile = request.Form.Files["thumbnailFile"] ?? request.Form.Files["thumbnail"] ?? request.Form.Files[0];
+            }
+
+            if (thumbnailFile == null || thumbnailFile.Length == 0)
+            {
+                return Results.BadRequest(new { error = "A valid image file is required in 'thumbnailFile' field." });
+            }
+
+            var thumbExt = Path.GetExtension(thumbnailFile.FileName).ToLowerInvariant();
+            var allowedImageExts = new[] { ".jpg", ".jpeg", ".png", ".webp" };
+            if (!allowedImageExts.Contains(thumbExt))
+            {
+                return Results.BadRequest(new { error = $"Unsupported image extension '{thumbExt}'. Allowed: {string.Join(", ", allowedImageExts)}" });
+            }
+
+            var video = await dbContext.Videos.FirstOrDefaultAsync(v => v.Id == id, cancellationToken);
+            if (video == null)
+            {
+                return Results.NotFound(new { error = $"Video with ID '{id}' was not found." });
+            }
+
+            var savedPath = await storageService.SaveCustomThumbnailAsync(id, thumbnailFile, cancellationToken);
+            video.ThumbnailPath = savedPath;
+            await dbContext.SaveChangesAsync(cancellationToken);
+
+            var baseUrl = $"{request.Scheme}://{request.Host}";
+            return Results.Ok(new
+            {
+                message = "Thumbnail updated successfully.",
+                thumbnailUrl = $"{baseUrl}/api/videos/{id}/thumbnail"
+            });
+        })
+        .DisableAntiforgery()
+        .WithName("UpdateVideoThumbnail")
+        .WithSummary("Sets or updates the poster thumbnail for an existing video.")
+        .Produces(StatusCodes.Status200OK)
+        .Produces(StatusCodes.Status400BadRequest)
+        .Produces(StatusCodes.Status404NotFound);
 
         // 2. Get Video Status & Metadata by ID
         group.MapGet("/{id:guid}", async (
@@ -252,7 +332,6 @@ public static class VideoEndpoints
                 cache.Set(segmentKey, true, TimeSpan.FromMinutes(60));
             }
 
-            // High-performance immutable caching for video chunks
             response.Headers.CacheControl = "public, max-age=31536000, immutable";
             return Results.File(segmentPath, "video/mp2t", lastModified: File.GetLastWriteTimeUtc(segmentPath), enableRangeProcessing: true);
         }

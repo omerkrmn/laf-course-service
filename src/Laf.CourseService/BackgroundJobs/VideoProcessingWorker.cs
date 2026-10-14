@@ -98,10 +98,18 @@ public class VideoProcessingWorker : BackgroundService
                 video.FileSizeBytes = probeResult.FileSizeBytes;
             }
 
-            // 2. Extract poster thumbnail
-            _logger.LogInformation("Extracting poster thumbnail for video {VideoId}", videoId);
-            var thumbnailPath = await transcoderService.GenerateThumbnailAsync(tempFilePath, hlsDir, cancellationToken);
-            video.ThumbnailPath = thumbnailPath;
+            // 2. Extract poster thumbnail (if not already custom provided by user)
+            if (!storageService.ThumbnailExists(videoId))
+            {
+                _logger.LogInformation("Extracting poster thumbnail for video {VideoId}", videoId);
+                var thumbnailPath = await transcoderService.GenerateThumbnailAsync(tempFilePath, hlsDir, cancellationToken);
+                video.ThumbnailPath = thumbnailPath;
+            }
+            else
+            {
+                _logger.LogInformation("Custom thumbnail already provided for video {VideoId}. Skipping auto-extraction.", videoId);
+                video.ThumbnailPath = storageService.GetThumbnailPath(videoId);
+            }
 
             // 3. Transcode to HLS (.m3u8 and .ts segments)
             _logger.LogInformation("Transcoding video {VideoId} to HLS", videoId);

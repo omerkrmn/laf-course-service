@@ -9,6 +9,7 @@ public interface IVideoStorageService
     string GetProcessedHlsDirectory(Guid videoId);
     string GetMasterPlaylistPath(Guid videoId);
     string GetThumbnailPath(Guid videoId);
+    Task<string> SaveCustomThumbnailAsync(Guid videoId, IFormFile file, CancellationToken cancellationToken = default);
     string GetSegmentPath(Guid videoId, string segmentFileName);
     bool SegmentExists(Guid videoId, string segmentFileName);
     bool MasterPlaylistExists(Guid videoId);
