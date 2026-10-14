@@ -5,7 +5,7 @@ meta {
 }
 
 get {
-  url: http://localhost:5096/api/videos/{{videoId}}/manifest.m3u8
+  url: {{BaseUrl}}/videos/{{videoId}}/manifest.m3u8
   body: none
   auth: inherit
 }
