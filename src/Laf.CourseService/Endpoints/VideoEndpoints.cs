@@ -4,6 +4,7 @@ using Laf.CourseService.Models;
 using Laf.CourseService.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
 
 namespace Laf.CourseService.Endpoints;
@@ -172,6 +173,7 @@ public static class VideoEndpoints
             HttpResponse response,
             MediaDbContext dbContext,
             IVideoStorageService storageService,
+            IMemoryCache cache,
             CancellationToken cancellationToken) =>
         {
             var video = await dbContext.Videos.AsNoTracking().FirstOrDefaultAsync(v => v.Id == id, cancellationToken);
@@ -193,8 +195,19 @@ public static class VideoEndpoints
                 return Results.NotFound(new { error = "HLS master playlist file not found on server." });
             }
 
+            var manifestKey = $"manifest_{id}";
+            if (cache.TryGetValue(manifestKey, out _))
+            {
+                response.Headers["X-Cache-Status"] = "HIT";
+            }
+            else
+            {
+                response.Headers["X-Cache-Status"] = "MISS";
+                cache.Set(manifestKey, true, TimeSpan.FromSeconds(60));
+            }
+
             response.Headers.CacheControl = "public, max-age=60";
-            return Results.File(masterPath, "application/vnd.apple.mpegurl", enableRangeProcessing: true);
+            return Results.File(masterPath, "application/vnd.apple.mpegurl", lastModified: File.GetLastWriteTimeUtc(masterPath), enableRangeProcessing: true);
         })
         .WithName("GetHlsManifest")
         .WithSummary("Serves HLS master playlist (.m3u8) for video streaming.")
@@ -214,7 +227,8 @@ public static class VideoEndpoints
             Guid id,
             string segmentName,
             HttpResponse response,
-            IVideoStorageService storageService)
+            IVideoStorageService storageService,
+            IMemoryCache cache)
         {
             if (string.IsNullOrWhiteSpace(segmentName) || !segmentName.EndsWith(".ts", StringComparison.OrdinalIgnoreCase))
             {
@@ -227,9 +241,20 @@ public static class VideoEndpoints
                 return Results.NotFound(new { error = $"Segment '{segmentName}' not found for video '{id}'." });
             }
 
+            var segmentKey = $"seg_{id}_{segmentName.ToLowerInvariant()}";
+            if (cache.TryGetValue(segmentKey, out _))
+            {
+                response.Headers["X-Cache-Status"] = "HIT";
+            }
+            else
+            {
+                response.Headers["X-Cache-Status"] = "MISS";
+                cache.Set(segmentKey, true, TimeSpan.FromMinutes(60));
+            }
+
             // High-performance immutable caching for video chunks
             response.Headers.CacheControl = "public, max-age=31536000, immutable";
-            return Results.File(segmentPath, "video/mp2t", enableRangeProcessing: true);
+            return Results.File(segmentPath, "video/mp2t", lastModified: File.GetLastWriteTimeUtc(segmentPath), enableRangeProcessing: true);
         }
 
         // 6. Poster Thumbnail
@@ -253,7 +278,7 @@ public static class VideoEndpoints
             }
 
             response.Headers.CacheControl = "public, max-age=86400";
-            return Results.File(thumbnailPath, "image/jpeg");
+            return Results.File(thumbnailPath, "image/jpeg", lastModified: File.GetLastWriteTimeUtc(thumbnailPath));
         })
         .WithName("GetVideoThumbnail")
         .WithSummary("Serves the generated video thumbnail image.")
