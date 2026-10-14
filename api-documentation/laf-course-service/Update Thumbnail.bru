@@ -1,0 +1,19 @@
+meta {
+  name: Update Thumbnail
+  type: http
+  seq: 6
+}
+
+put {
+  url: {{BaseUrl}}/videos/{{videoId}}/thumbnail
+  body: multipartForm
+  auth: inherit
+}
+
+body:multipart-form {
+  thumbnailFile: @file()
+}
+
+vars:pre-request {
+  videoId: 423edda1-26b2-436c-8cc9-474c4d300e3b
+}

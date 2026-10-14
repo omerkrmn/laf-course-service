@@ -1,0 +1,15 @@
+meta {
+  name: Get Thumbnail
+  type: http
+  seq: 7
+}
+
+get {
+  url: {{BaseUrl}}/videos/{{videoId}}/thumbnail
+  body: none
+  auth: inherit
+}
+
+vars:pre-request {
+  videoId: 799fd40a-1415-4452-b468-f0cff7bae1e7
+}
