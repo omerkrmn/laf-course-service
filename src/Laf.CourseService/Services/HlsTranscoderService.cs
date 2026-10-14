@@ -17,7 +17,7 @@ public class HlsTranscoderService : IHlsTranscoderService
         _options = options.Value;
         _logger = logger;
     }
-
+    
     public async Task<VideoProbeResult> ProbeVideoAsync(string inputFilePath, CancellationToken cancellationToken = default)
     {
         if (!File.Exists(inputFilePath))
@@ -169,6 +169,13 @@ public class HlsTranscoderService : IHlsTranscoderService
         // Check WinGet installation directory on Windows
         if (isWindows)
         {
+            // Check standard C:\ffmpeg\bin (dedicated location for Windows Server & IIS)
+            var cFfmpegPath = Path.Combine(@"C:\ffmpeg\bin", exeName);
+            if (File.Exists(cFfmpegPath))
+            {
+                return cFfmpegPath;
+            }
+
             var userProfile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
             var wingetDir = Path.Combine(userProfile, @"AppData\Local\Microsoft\WinGet\Packages");
             if (Directory.Exists(wingetDir))
