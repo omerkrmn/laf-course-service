@@ -17,7 +17,7 @@ public class HlsTranscoderService : IHlsTranscoderService
         _options = options.Value;
         _logger = logger;
     }
-    
+
     public async Task<VideoProbeResult> ProbeVideoAsync(string inputFilePath, CancellationToken cancellationToken = default)
     {
         if (!File.Exists(inputFilePath))
@@ -123,13 +123,17 @@ public class HlsTranscoderService : IHlsTranscoderService
         BufferedCommandResult result;
         try
         {
+            // varolan işlemci çekirdeklerinin yarısını bu işe hacıyoruz ama hız artışı baya fazla.
+            int totalCores = Environment.ProcessorCount;
+            int threadsToUse = Math.Max(1, totalCores / 2);
             result = await Cli.Wrap(ffmpegExe)
                 .WithArguments([
                     "-y",
                     "-i", inputFilePath,
                     "-codec:v", "libx264",
-                    "-crf", "22",
-                    "-preset", "fast",
+                    "-crf", "28",
+                    "-preset", "veryfast",
+                    "-threads", threadsToUse.ToString(), 
                     "-codec:a", "aac",
                     "-b:a", "128k",
                     "-hls_time", "6",
