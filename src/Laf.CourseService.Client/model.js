@@ -62,36 +62,34 @@ class VideoKaydi {
         frameRate = 0,
         yukleyenPersonelId = '',
         uploaderId = '',
+        yuklemeTarihi = new Date().toISOString(),
+        // SQL JOIN ile Personeller tablosundan çekilen sunum alanı:
         yukleyenPersonelAd = '',
-        uploadedBy = '',
-        yuklemeTarihi = new Date().toISOString()
+        uploadedBy = ''
     } = {}) {
         this.id = id;
         this.originalFileName = originalFileName;
         this.baslik = baslik || (originalFileName ? originalFileName.replace(/\.[^/.]+$/, "") : 'Eğitim Videosu');
         this.fileSizeBytes = Number(fileSizeBytes) || 0;
         this.durationSeconds = Number(durationSeconds) || 0;
-        this.manifestUrl = manifestUrl || '';
-        this.thumbnailUrl = thumbnailUrl || '';
+        this.manifestUrl = manifestUrl;
+        this.thumbnailUrl = thumbnailUrl;
         this.status = Number(status) || 0;
-        this.statusText = statusText || 'Pending';
-        this.resolution = resolution || '';
-        this.videoCodec = videoCodec || '';
-        this.audioCodec = audioCodec || '';
+        this.statusText = statusText;
+        this.resolution = resolution;
+        this.videoCodec = videoCodec;
+        this.audioCodec = audioCodec;
         this.bitrate = Number(bitrate) || 0;
         this.frameRate = Number(frameRate) || 0;
-        // İlişkisel yabancı anahtar (FK):
         this.yukleyenPersonelId = yukleyenPersonelId || uploaderId || '';
-        // SQL JOIN ile doldurulan türetilmiş isim alanı:
+        this.yuklemeTarihi = yuklemeTarihi;
+
+        // JOIN sunum alanı:
         this.yukleyenPersonelAd = yukleyenPersonelAd || uploadedBy || '';
-        this.yuklemeTarihi = yuklemeTarihi || new Date().toISOString();
     }
 
-    // Kod tabanı genelinde veri tekrarı yapmadan tam uyumluluk (Single Source of Truth):
     get uploaderId() { return this.yukleyenPersonelId; }
-    set uploaderId(val) { this.yukleyenPersonelId = val; }
     get uploadedBy() { return this.yukleyenPersonelAd; }
-    set uploadedBy(val) { this.yukleyenPersonelAd = val; }
 }
 
 /**
@@ -104,18 +102,18 @@ class OynatmaListesi {
         baslik = '',
         aciklama = '',
         olusturanPersonelId = '',
+        olusturmaTarihi = new Date().toISOString(),
+        // SQL JOIN ile türetilen alanlar:
         olusturanPersonelAd = '',
-        videoSayisi = 0,
-        olusturmaTarihi = new Date().toISOString()
+        videoSayisi = 0
     } = {}) {
         this.id = id;
         this.baslik = baslik;
         this.aciklama = aciklama;
         this.olusturanPersonelId = olusturanPersonelId;
-        // SQL JOIN üzerinden türetilir (tabloda tekrar saklanmaz):
+        this.olusturmaTarihi = olusturmaTarihi;
         this.olusturanPersonelAd = olusturanPersonelAd;
         this.videoSayisi = Number(videoSayisi) || 0;
-        this.olusturmaTarihi = olusturmaTarihi;
     }
 }
 
@@ -131,7 +129,7 @@ class OynatmaListesiOgesi {
         sira = 1,
         kilitliMi = false,
         eklenmeTarihi = new Date().toISOString(),
-        // JOIN ile çekilen video özellikleri (ekranda doğrudan sunum için):
+        // SQL JOIN (Videolar + Personeller) sunum alanları:
         originalFileName = '',
         durationSeconds = 0,
         manifestUrl = '',
@@ -145,6 +143,7 @@ class OynatmaListesiOgesi {
         frameRate = 0,
         yukleyenPersonelId = '',
         yukleyenPersonelAd = '',
+        uploadedBy = '',
         yuklemeTarihi = ''
     } = {}) {
         this.id = id;
@@ -155,7 +154,6 @@ class OynatmaListesiOgesi {
         this.kilitliMi = Boolean(kilitliMi);
         this.eklenmeTarihi = eklenmeTarihi;
 
-        // JOIN sunum alanları:
         this.originalFileName = originalFileName;
         this.durationSeconds = Number(durationSeconds) || 0;
         this.manifestUrl = manifestUrl;
@@ -168,7 +166,7 @@ class OynatmaListesiOgesi {
         this.bitrate = Number(bitrate) || 0;
         this.frameRate = Number(frameRate) || 0;
         this.yukleyenPersonelId = yukleyenPersonelId;
-        this.yukleyenPersonelAd = yukleyenPersonelAd;
+        this.yukleyenPersonelAd = yukleyenPersonelAd || uploadedBy || '';
         this.yuklemeTarihi = yuklemeTarihi;
     }
 
@@ -177,9 +175,9 @@ class OynatmaListesiOgesi {
 }
 
 /**
- * 5. Video İzleme & Telemetri Analitik Modeli (3NF Normalize Edilmiş)
- * Kullanıcı adı, departman, video adı gibi tekrarlayan alanlar veritabanında saklanmaz;
- * Video ve Personel tabloları ile JOIN yapılarak çalışma anında dinamik oluşturulur.
+ * 5. Video İzleme & Telemetri Analitik Modeli (3NF Normalize)
+ * Kullanıcı adı, departman, video adı gibi alanlar tabloda saklanmaz;
+ * Video ve Personel tabloları ile dinamik SQL JOIN yapılarak getirilir.
  */
 class VideoAnalitik {
     constructor({
@@ -201,7 +199,7 @@ class VideoAnalitik {
         altTabGecmisi = [],
         toplamOdakDisiSure = 0,
         sonIzlemeTarihi = new Date().toISOString(),
-        // Normalized JOIN ile gelen türetilmiş alanlar:
+        // SQL JOIN ile dinamik doldurulan sunum alanları:
         videoTitle = '',
         videoUploader = '',
         izleyenPersonelAd = '',
@@ -226,7 +224,6 @@ class VideoAnalitik {
         this.toplamOdakDisiSure = Number(toplamOdakDisiSure) || 0;
         this.sonIzlemeTarihi = sonIzlemeTarihi;
 
-        // JOIN üzerinden gelen sunum alanları:
         this.videoTitle = videoTitle;
         this.videoUploader = videoUploader;
         this.izleyenPersonelAd = izleyenPersonelAd;
@@ -268,7 +265,7 @@ class VideoTest {
 }
 
 /**
- * 7. Test Sonucu Modeli (3NF Normalize Edilmiş)
+ * 7. Test Sonucu Modeli (3NF Normalize)
  * Personel adı ve departman bilgisi Personeller tablosundan JOIN ile gelir.
  */
 class TestSonucu {
@@ -284,7 +281,7 @@ class TestSonucu {
         gectiMi = false,
         verilenCevaplar = [],
         tamamlanmaTarihi = new Date().toISOString(),
-        // Normalized JOIN türetilmiş alanlar:
+        // SQL JOIN ile dinamik gelen alanlar:
         personelAd = '',
         personelDepartman = '',
         testBaslik = ''

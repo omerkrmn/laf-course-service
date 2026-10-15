@@ -37,6 +37,8 @@
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             background-color: var(--bg-surface);
             color: var(--text-main);
+            display: flex;
+            flex-direction: column;
             min-height: 100vh;
         }
 
@@ -75,11 +77,121 @@
             box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
         }
 
-        .video-list-container {
-            max-height: calc(100vh - 210px);
-            min-height: 480px;
+        #viewPersonelContainer {
+            flex: 1;
+            height: calc(100vh - 54px);
             overflow-y: auto;
-            scrollbar-width: thin;
+        }
+
+        /* ==================== MASAÜSTÜ & TABLET EKRANLAR (min-width: 768px): 1 EKRANA SIĞAN NO-SCROLL DÜZEN ==================== */
+        @media (min-width: 768px) {
+            html,
+            body {
+                height: 100vh;
+                max-height: 100vh;
+                overflow: hidden; /* Masaüstü ve tablette taşma ve scroll engellenir */
+                margin: 0;
+                padding: 0;
+            }
+
+            #viewVideosContainer {
+                flex: 1;
+                height: calc(100vh - 54px);
+                max-height: calc(100vh - 54px);
+                overflow: hidden;
+                padding: 10px 14px !important;
+            }
+
+            #viewVideosContainer > .row {
+                height: 100%;
+                margin: 0;
+            }
+
+            #viewVideosContainer > .row > [class*="col-"] {
+                height: 100%;
+                display: flex;
+                flex-direction: column;
+                padding-left: 6px;
+                padding-right: 6px;
+                min-height: 0; /* KRİTİK: Flex taşmasını ve listenin kaybolmasını önler */
+            }
+
+            #viewVideosContainer .card.h-100 {
+                height: 100% !important;
+                display: flex;
+                flex-direction: column;
+                overflow: hidden;
+                min-height: 0; /* KRİTİK: Flexbox taşmasını önler */
+            }
+
+            #videoDetailSection {
+                flex: 1;
+                display: flex;
+                flex-direction: column;
+                overflow: hidden;
+                padding: 10px 12px !important;
+                min-height: 0;
+            }
+
+            .video-player-wrapper {
+                flex: 1;
+                min-height: 160px;
+                max-height: calc(100vh - 195px);
+            }
+
+            .video-list-container {
+                flex: 1;
+                min-height: 0; /* KRİTİK: Listenin kart dışına taşarak yok olmasını önler */
+                overflow-y: auto;
+                scrollbar-width: thin;
+            }
+        }
+
+        /* ==================== KÜÇÜK VE MOBİL EKRANLAR (max-width: 767.98px) ==================== */
+        @media (max-width: 767.98px) {
+            html,
+            body {
+                height: auto !important;
+                min-height: 100vh;
+                overflow-x: hidden;
+                overflow-y: auto !important; /* Küçük ekranda dikey kaydırma serbest */
+            }
+
+            #viewVideosContainer {
+                height: auto !important;
+                max-height: none !important;
+                overflow: visible !important;
+                padding: 10px 10px 30px 10px !important;
+            }
+
+            #viewVideosContainer > .row {
+                height: auto !important;
+            }
+
+            #viewVideosContainer > .row > [class*="col-"] {
+                height: auto !important;
+                margin-bottom: 14px;
+            }
+
+            #viewVideosContainer .card.h-100 {
+                height: auto !important;
+                overflow: visible !important;
+            }
+
+            .video-player-wrapper {
+                max-height: 42vh;
+            }
+
+            .video-list-container {
+                max-height: 480px;
+                overflow-y: auto;
+                scrollbar-width: thin;
+            }
+
+            #emptySelectionState {
+                min-height: 140px !important;
+                padding: 1.5rem !important;
+            }
         }
 
         .video-item {
@@ -87,8 +199,8 @@
             transition: all 0.2s ease-in-out;
             border-radius: 10px;
             border: 1px solid transparent;
-            padding: 12px;
-            margin-bottom: 8px;
+            padding: 10px;
+            margin-bottom: 6px;
             background: #ffffff;
         }
 
@@ -104,8 +216,8 @@
         }
 
         .thumb-preview {
-            width: 80px;
-            height: 52px;
+            width: 72px;
+            height: 48px;
             object-fit: cover;
             border-radius: 6px;
             background-color: #0f172a;
@@ -123,22 +235,27 @@
             object-fit: cover;
         }
 
+        /* Video Oynatıcı: Tek ekranda asla taşmayan, 16:9 oranlı kompakt sinematik oynatıcı */
         .video-player-wrapper {
             background-color: #000000;
             border-radius: 12px;
             overflow: hidden;
             box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
             position: relative;
+            flex: 1;
             width: 100%;
+            max-height: calc(100vh - 200px);
             aspect-ratio: 16 / 9;
             display: flex;
             align-items: center;
             justify-content: center;
+            margin: 0 auto;
         }
 
         .video-player-wrapper video {
             width: 100%;
             height: 100%;
+            max-height: 100%;
             object-fit: contain;
         }
 
@@ -193,14 +310,15 @@
         }
 
         .empty-placeholder {
-            min-height: 400px;
+            flex: 1;
+            min-height: 180px;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             color: #94a3b8;
             text-align: center;
-            padding: 40px;
+            padding: 24px;
         }
 
         .pulse-indicator {
@@ -289,6 +407,12 @@
             border-radius: 12px;
             padding: 30px;
             text-align: center;
+        }
+
+        /* Çoklu / İç İçe Modallar İçin Z-Index Desteği (Log/Sınav Detayları Önde Görünsün) */
+        #telemetryDetailModal,
+        #viewTestResultDetailModal {
+            z-index: 1080 !important;
         }
     </style>
 </head>
@@ -473,35 +597,23 @@
     <!-- ==================== GÖRÜNÜM 1: VİDEOLAR ==================== -->
     <div id="viewVideosContainer" class="container-fluid px-3 px-lg-4 py-4">
 
-        <!-- Yetki Uyarısı -->
-        <div id="permissionWarningBanner"
-            class="alert alert-warning py-2 px-3 small d-flex align-items-center justify-content-between mb-4 d-none">
-            <div class="d-flex align-items-center gap-2">
-                <i class="bi bi-shield-exclamation fs-5 text-warning"></i>
-                <span>Aktif personel (<strong id="warnUserName"></strong>) <strong>Video Yükleme Yetkisine</strong>
-                    sahip değildir. Sadece izleme yapabilir.</span>
-            </div>
-            <button class="btn btn-sm btn-outline-dark py-0" id="btnSwitchToAuthorizedUser">Yetkili Kullanıcıya
-                Geç</button>
-        </div>
-
-        <div class="row g-3 g-xl-4">
+        <div class="row g-3 g-xl-4 pb-4">
 
             <!-- SOL: Video Oynatıcı & Analitik (EKRANIN BÜYÜK BİR KISMINI KAPLAR) -->
-            <div class="col-lg-8 col-xl-9">
+            <div class="col-12 col-md-7 col-lg-8 col-xl-9">
                 <div class="card h-100 shadow-sm border-0">
 
-                    <div id="emptySelectionState" class="empty-placeholder py-5">
+                    <div id="emptySelectionState" class="empty-placeholder py-4 py-md-5">
                         <i class="bi bi-film fs-1 text-secondary mb-3"></i>
                         <h5 class="fw-bold text-secondary">Video Seçilmedi</h5>
                         <p class="text-muted small">İzlemek için sağdaki listeden bir eğitime tıklayınız.</p>
                     </div>
 
-                    <div id="videoDetailSection" class="card-body p-3 p-lg-4 d-none">
+                    <div id="videoDetailSection" class="card-body p-2 p-lg-3 d-none">
 
                         <!-- VİDEONUN ÜST KISMI: VİDEO ADI, YÜKLENME TARİHİ & BUTONLAR -->
                         <div
-                            class="p-3 mb-3 bg-light rounded-3 border d-flex flex-wrap align-items-center justify-content-between gap-3">
+                            class="p-2 px-3 mb-2 bg-light rounded-3 border d-flex flex-wrap align-items-center justify-content-between gap-2">
                             <div>
                                 <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
                                     <span class="badge bg-primary px-2" id="detailOrderBadge">Sıra #1</span>
@@ -530,6 +642,13 @@
                                     <i class="bi bi-info-circle-fill text-primary"></i>
                                     <span class="fw-semibold">Bilgi</span>
                                 </button>
+                                <!-- ANALİTİK BUTONU: Tıpkı Bilgi butonu gibi modal olarak analitikleri açar -->
+                                <button class="btn btn-sm btn-outline-primary d-flex align-items-center gap-1 shadow-sm"
+                                    id="btnOpenAnalyticsModal"
+                                    title="Öğrenci izleme ve sınav analitiklerini modal olarak gör">
+                                    <i class="bi bi-graph-up-arrow"></i>
+                                    <span class="fw-semibold">Analitik</span>
+                                </button>
                                 <button class="btn btn-sm btn-outline-info" id="btnManageTests"
                                     title="Bu video için ara ve bitirme testlerini yönet">
                                     <i class="bi bi-question-diamond-fill me-1"></i>Testler (<span
@@ -551,7 +670,7 @@
                         </div>
 
                         <!-- VİDEO OYNATICI (TAM GENİŞLİK, 16/9 ORAN, SİNEMA BÜYÜKLÜĞÜNDE) -->
-                        <div class="video-player-wrapper mb-3"
+                        <div class="video-player-wrapper mb-2"
                             style="width: 100%; aspect-ratio: 16/9; background: #000; border-radius: 12px; overflow: hidden; position: relative;">
                             <video id="mainVideoPlayer" controls playsinline
                                 style="width: 100%; height: 100%; object-fit: contain;"></video>
@@ -583,7 +702,7 @@
 
                         <!-- Oynatıcı Altı Hızlı Çubuk & Test Bildirim Kartı -->
                         <div
-                            class="d-flex align-items-center justify-content-between p-2 bg-light rounded-3 border mb-3">
+                            class="d-flex align-items-center justify-content-between p-2 bg-light rounded-3 border mb-2">
                             <span class="badge bg-success bg-opacity-10 text-success small"><i
                                     class="bi bi-activity me-1"></i>Canlı Telemetri Aktif</span>
                             <button class="btn btn-sm btn-outline-secondary py-0" id="btnCopyManifest"
@@ -592,160 +711,21 @@
 
                         <!-- Video Testi Çözme Bildirim Kartı (Öğrenci) -->
                         <div id="videoTestBannerBox"
-                            class="p-3 rounded-3 border bg-light d-flex align-items-center justify-content-between gap-2 shadow-sm d-none mb-3">
+                            class="p-2 px-3 rounded-3 border bg-light d-flex align-items-center justify-content-between gap-2 shadow-sm d-none mb-0">
                             <div class="d-flex align-items-center gap-2 overflow-hidden">
                                 <div class="p-2 rounded-circle bg-warning bg-opacity-10 text-warning flex-shrink-0">
-                                    <i class="bi bi-award-fill fs-4"></i>
+                                    <i class="bi bi-award-fill fs-5"></i>
                                 </div>
                                 <div class="overflow-hidden">
                                     <div class="fw-bold small text-dark text-truncate" id="bannerTestTitle">Eğitim
                                         Değerlendirme Testi</div>
-                                    <div class="text-muted small text-truncate" style="font-size:0.75rem;"
+                                    <div class="text-muted small text-truncate" style="font-size:0.72rem;"
                                         id="bannerTestSubtitle">Bu video için değerlendirme testi mevcuttur.</div>
                                 </div>
                             </div>
-                            <button class="btn btn-sm btn-success py-2 px-3 fw-bold flex-shrink-0 shadow-sm"
+                            <button class="btn btn-sm btn-success py-1 px-3 fw-bold flex-shrink-0 shadow-sm"
                                 id="btnStartStudentTest">
                                 <i class="bi bi-pencil-square me-1"></i>Testi Çöz
-                            </button>
-                        </div>
-
-                        <!-- İZLEME & TEST ANALİTİKLERİ (YALNIZCA VİDEO SAHİBİ İSE GÖRÜNÜR!) -->
-                        <div id="videoAnalyticsWrapper" class="mt-4 pt-3 border-top d-none">
-                            <div class="d-flex align-items-center justify-content-between mb-3">
-                                <div class="d-flex align-items-center gap-2">
-                                    <i class="bi bi-graph-up-arrow text-primary fs-5"></i>
-                                    <h6 class="mb-0 fw-bold">Öğrenci İzleme & Sınav Analitikleri</h6>
-                                    <span class="badge bg-primary bg-opacity-10 text-primary small">Yükleyici
-                                        Özel</span>
-                                </div>
-                                <button class="btn btn-outline-secondary btn-sm" id="btnRefreshAnalytics"><i
-                                        class="bi bi-arrow-clockwise me-1"></i>Yenile</button>
-                            </div>
-
-                            <div id="analyticsAuthorizedBox" class="d-none">
-                                <!-- Analitik Alt Sekmeleri -->
-                                <ul class="nav nav-pills bg-light p-1 rounded-3 border mb-3" id="analyticsSubTabs">
-                                    <li class="nav-item">
-                                        <button class="nav-link active py-1 px-3 small fw-bold" id="subtabWatchBtn"
-                                            type="button">
-                                            <i class="bi bi-graph-up-arrow me-1"></i>İzleme & Telemetri
-                                        </button>
-                                    </li>
-                                    <li class="nav-item">
-                                        <button class="nav-link py-1 px-3 small fw-bold" id="subtabQuizBtn"
-                                            type="button">
-                                            <i class="bi bi-award-fill me-1 text-warning"></i>Öğrenci Test Sonuçları
-                                            <span class="badge bg-primary rounded-pill ms-1"
-                                                id="badgeSubtabQuizCount">0</span>
-                                        </button>
-                                    </li>
-                                </ul>
-
-                                <!-- ALTI SEKME 1: İZLEME & TELEMETRİ -->
-                                <div id="subtabWatchContainer">
-                                    <div class="row g-2 mb-3">
-                                        <div class="col-sm-3 col-6">
-                                            <div class="p-2 border rounded-3 bg-light text-center">
-                                                <div class="text-muted small" style="font-size:0.72rem;">İzleyen</div>
-                                                <h6 class="fw-bold mb-0 text-primary" id="summaryViewerCount">0</h6>
-                                            </div>
-                                        </div>
-                                        <div class="col-sm-3 col-6">
-                                            <div class="p-2 border rounded-3 bg-light text-center">
-                                                <div class="text-muted small" style="font-size:0.72rem;">Ortalama
-                                                    İlerleme</div>
-                                                <h6 class="fw-bold mb-0 text-success" id="summaryAvgProgress">%0</h6>
-                                            </div>
-                                        </div>
-                                        <div class="col-sm-3 col-6">
-                                            <div class="p-2 border rounded-3 bg-light text-center">
-                                                <div class="text-muted small" style="font-size:0.72rem;">Atlama (Seek)
-                                                </div>
-                                                <h6 class="fw-bold mb-0 text-warning" id="summaryTotalSkips">0</h6>
-                                            </div>
-                                        </div>
-                                        <div class="col-sm-3 col-6">
-                                            <div class="p-2 border rounded-3 bg-light text-center">
-                                                <div class="text-muted small" style="font-size:0.72rem;">Sekme Ayrılma
-                                                </div>
-                                                <h6 class="fw-bold mb-0 text-danger" id="summaryTotalTabLeaves">0</h6>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div class="table-responsive border rounded-3">
-                                        <table class="table table-sm table-hover align-middle mb-0"
-                                            style="font-size: 0.86rem;">
-                                            <thead class="table-light small text-uppercase text-secondary">
-                                                <tr>
-                                                    <th>İzleyen Personel</th>
-                                                    <th>İlerleme</th>
-                                                    <th>Ulaşılan Saniye</th>
-                                                    <th>Hız</th>
-                                                    <th class="text-center">Atladı mı?</th>
-                                                    <th class="text-center">Alt-Tab Ayrıldı mı?</th>
-                                                    <th class="text-end pe-2">Log</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody id="analyticsTableBody"></tbody>
-                                        </table>
-                                    </div>
-                                </div>
-
-                                <!-- ALTI SEKME 2: ÖĞRENCİ TEST SONUÇLARI -->
-                                <div id="subtabQuizContainer" class="d-none">
-                                    <div class="row g-2 mb-3">
-                                        <div class="col-sm-3 col-6">
-                                            <div class="p-2 border rounded-3 bg-light text-center">
-                                                <div class="text-muted small" style="font-size:0.72rem;">Çözülen Sınav
-                                                </div>
-                                                <h6 class="fw-bold mb-0 text-primary" id="summaryQuizTotalSubmissions">0
-                                                </h6>
-                                            </div>
-                                        </div>
-                                        <div class="col-sm-3 col-6">
-                                            <div class="p-2 border rounded-3 bg-light text-center">
-                                                <div class="text-muted small" style="font-size:0.72rem;">Ortalama Başarı
-                                                </div>
-                                                <h6 class="fw-bold mb-0 text-info" id="summaryQuizAvgScore">%0</h6>
-                                            </div>
-                                        </div>
-                                        <div class="col-sm-3 col-6">
-                                            <div class="p-2 border rounded-3 bg-light text-center">
-                                                <div class="text-muted small" style="font-size:0.72rem;">Başarılı
-                                                    (Geçti)</div>
-                                                <h6 class="fw-bold mb-0 text-success" id="summaryQuizPassCount">0</h6>
-                                            </div>
-                                        </div>
-                                        <div class="col-sm-3 col-6">
-                                            <div class="p-2 border rounded-3 bg-light text-center">
-                                                <div class="text-muted small" style="font-size:0.72rem;">Başarısız
-                                                    (Kaldı)</div>
-                                                <h6 class="fw-bold mb-0 text-danger" id="summaryQuizFailCount">0</h6>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div class="table-responsive border rounded-3">
-                                        <table class="table table-sm table-hover align-middle mb-0"
-                                            style="font-size: 0.86rem;">
-                                            <thead class="table-light small text-uppercase text-secondary">
-                                                <tr>
-                                                    <th>Öğrenci Personel</th>
-                                                    <th>Test Başlığı & Türü</th>
-                                                    <th class="text-center">Puan</th>
-                                                    <th class="text-center">Doğru / Yanlış</th>
-                                                    <th class="text-center">Sonuç</th>
-                                                    <th>Tarih</th>
-                                                    <th class="text-end pe-2">Detay</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody id="quizResultsTableBody"></tbody>
-                                        </table>
-                                    </div>
-                                </div>
-                            </div>
                         </div>
 
                     </div>
@@ -753,8 +733,8 @@
             </div>
 
             <!-- SAĞ: OYNATMA LİSTESİ & VİDEO LİSTESİ -->
-            <div class="col-lg-4 col-xl-3">
-                <div class="card h-100 shadow-sm border-0 sticky-top" style="top: 75px; z-index: 10;">
+            <div class="col-12 col-md-5 col-lg-4 col-xl-3">
+                <div class="card h-100 shadow-sm border-0">
                     <div class="card-header bg-white py-2 px-3 border-bottom">
                         <div class="d-flex align-items-center justify-content-between mb-2">
                             <div class="d-flex align-items-center gap-2">
@@ -1310,6 +1290,155 @@
                             class="bi bi-link-45deg me-1"></i>Manifest URL Kopyala</button>
                     <button type="button" class="btn btn-primary btn-sm px-4 fw-semibold"
                         data-bs-dismiss="modal">Kapat</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== MODAL: ÖĞRENCİ İZLEME & TEST ANALİTİKLERİ ==================== -->
+    <div class="modal fade" id="videoAnalyticsModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered modal-xl modal-dialog-scrollable">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header bg-dark text-white border-0 py-3">
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="bi bi-graph-up-arrow text-primary fs-5"></i>
+                        <h5 class="modal-title fw-bold fs-6 mb-0">Öğrenci İzleme & Sınav Analitikleri</h5>
+                        <span class="badge bg-primary bg-opacity-25 text-light small ms-1"
+                            id="modalAnalyticsVideoTitle">-</span>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <button class="btn btn-outline-light btn-sm py-1 px-2" id="btnRefreshAnalytics"
+                            title="Analitikleri Yenile">
+                            <i class="bi bi-arrow-clockwise me-1"></i>Yenile
+                        </button>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                </div>
+                <div class="modal-body p-4">
+                    <!-- Yetki Uyarısı (Eğer yükleyici değilse) -->
+                    <div id="analyticsLockedBox" class="analytics-lock-box d-none">
+                        <i class="bi bi-shield-lock text-warning fs-1 d-block mb-2"></i>
+                        <h6 class="fw-bold">Bu Analitikler Korumalıdır</h6>
+                        <p class="text-muted small mb-0">Bu videonun öğrenci izleme ve sınav detaylarını yalnızca
+                            videoyu yükleyen personel (<strong id="lockedUploaderNameText">-</strong>) görüntüleyebilir.
+                        </p>
+                    </div>
+
+                    <!-- Yetkili Görünüm -->
+                    <div id="analyticsAuthorizedBox" class="d-none">
+                        <!-- Analitik Alt Sekmeleri -->
+                        <ul class="nav nav-pills bg-light p-1 rounded-3 border mb-3" id="analyticsSubTabs">
+                            <li class="nav-item">
+                                <button class="nav-link active py-1 px-3 small fw-bold" id="subtabWatchBtn"
+                                    type="button">
+                                    <i class="bi bi-graph-up-arrow me-1"></i>İzleme & Telemetri
+                                </button>
+                            </li>
+                            <li class="nav-item">
+                                <button class="nav-link py-1 px-3 small fw-bold" id="subtabQuizBtn" type="button">
+                                    <i class="bi bi-award-fill me-1 text-warning"></i>Öğrenci Test Sonuçları
+                                    <span class="badge bg-primary rounded-pill ms-1" id="badgeSubtabQuizCount">0</span>
+                                </button>
+                            </li>
+                        </ul>
+
+                        <!-- ALTI SEKME 1: İZLEME & TELEMETRİ -->
+                        <div id="subtabWatchContainer">
+                            <div class="row g-2 mb-3">
+                                <div class="col-sm-3 col-6">
+                                    <div class="p-2 border rounded-3 bg-light text-center">
+                                        <div class="text-muted small" style="font-size:0.72rem;">İzleyen</div>
+                                        <h6 class="fw-bold mb-0 text-primary" id="summaryViewerCount">0</h6>
+                                    </div>
+                                </div>
+                                <div class="col-sm-3 col-6">
+                                    <div class="p-2 border rounded-3 bg-light text-center">
+                                        <div class="text-muted small" style="font-size:0.72rem;">Ortalama İlerleme</div>
+                                        <h6 class="fw-bold mb-0 text-success" id="summaryAvgProgress">%0</h6>
+                                    </div>
+                                </div>
+                                <div class="col-sm-3 col-6">
+                                    <div class="p-2 border rounded-3 bg-light text-center">
+                                        <div class="text-muted small" style="font-size:0.72rem;">Atlama (Seek)</div>
+                                        <h6 class="fw-bold mb-0 text-warning" id="summaryTotalSkips">0</h6>
+                                    </div>
+                                </div>
+                                <div class="col-sm-3 col-6">
+                                    <div class="p-2 border rounded-3 bg-light text-center">
+                                        <div class="text-muted small" style="font-size:0.72rem;">Sekme Ayrılma</div>
+                                        <h6 class="fw-bold mb-0 text-danger" id="summaryTotalTabLeaves">0</h6>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="table-responsive border rounded-3">
+                                <table class="table table-sm table-hover align-middle mb-0" style="font-size: 0.86rem;">
+                                    <thead class="table-light small text-uppercase text-secondary">
+                                        <tr>
+                                            <th>İzleyen Personel</th>
+                                            <th>İlerleme</th>
+                                            <th>Ulaşılan Saniye</th>
+                                            <th>Hız</th>
+                                            <th class="text-center">Atladı mı?</th>
+                                            <th class="text-center">Alt-Tab Ayrıldı mı?</th>
+                                            <th class="text-end pe-2">Log</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="analyticsTableBody"></tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- ALTI SEKME 2: ÖĞRENCİ TEST SONUÇLARI -->
+                        <div id="subtabQuizContainer" class="d-none">
+                            <div class="row g-2 mb-3">
+                                <div class="col-sm-3 col-6">
+                                    <div class="p-2 border rounded-3 bg-light text-center">
+                                        <div class="text-muted small" style="font-size:0.72rem;">Çözülen Sınav</div>
+                                        <h6 class="fw-bold mb-0 text-primary" id="summaryQuizTotalSubmissions">0</h6>
+                                    </div>
+                                </div>
+                                <div class="col-sm-3 col-6">
+                                    <div class="p-2 border rounded-3 bg-light text-center">
+                                        <div class="text-muted small" style="font-size:0.72rem;">Ortalama Başarı</div>
+                                        <h6 class="fw-bold mb-0 text-info" id="summaryQuizAvgScore">%0</h6>
+                                    </div>
+                                </div>
+                                <div class="col-sm-3 col-6">
+                                    <div class="p-2 border rounded-3 bg-light text-center">
+                                        <div class="text-muted small" style="font-size:0.72rem;">Başarılı (Geçti)</div>
+                                        <h6 class="fw-bold mb-0 text-success" id="summaryQuizPassCount">0</h6>
+                                    </div>
+                                </div>
+                                <div class="col-sm-3 col-6">
+                                    <div class="p-2 border rounded-3 bg-light text-center">
+                                        <div class="text-muted small" style="font-size:0.72rem;">Başarısız (Kaldı)</div>
+                                        <h6 class="fw-bold mb-0 text-danger" id="summaryQuizFailCount">0</h6>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="table-responsive border rounded-3">
+                                <table class="table table-sm table-hover align-middle mb-0" style="font-size: 0.86rem;">
+                                    <thead class="table-light small text-uppercase text-secondary">
+                                        <tr>
+                                            <th>Öğrenci Personel</th>
+                                            <th>Test Başlığı & Türü</th>
+                                            <th class="text-center">Puan</th>
+                                            <th class="text-center">Doğru / Yanlış</th>
+                                            <th class="text-center">Sonuç</th>
+                                            <th>Tarih</th>
+                                            <th class="text-end pe-2">Detay</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="quizResultsTableBody"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light border-0 py-2">
+                    <button type="button" class="btn btn-secondary btn-sm px-4" data-bs-dismiss="modal">Kapat</button>
                 </div>
             </div>
         </div>
@@ -1948,9 +2077,12 @@
             modalResultDate: document.getElementById('modalResultDate'),
             modalResultQuestionsDetailContainer: document.getElementById('modalResultQuestionsDetailContainer'),
 
-            // Video Bilgi & Sidebar Elemanları
+            // Video Bilgi & Analitik & Sidebar Elemanları
             btnOpenVideoInfoModal: document.getElementById('btnOpenVideoInfoModal'),
             videoInfoModal: document.getElementById('videoInfoModal'),
+            btnOpenAnalyticsModal: document.getElementById('btnOpenAnalyticsModal'),
+            videoAnalyticsModal: document.getElementById('videoAnalyticsModal'),
+            modalAnalyticsVideoTitle: document.getElementById('modalAnalyticsVideoTitle'),
             btnCopyManifestModal: document.getElementById('btnCopyManifestModal'),
             videoAnalyticsWrapper: document.getElementById('videoAnalyticsWrapper'),
             sidebarOffcanvas: document.getElementById('sidebarOffcanvas'),
@@ -1972,6 +2104,33 @@
         const inVideoQuizModalInstance = new bootstrap.Modal(elements.inVideoQuizModal);
         const viewTestResultDetailModalInstance = new bootstrap.Modal(elements.viewTestResultDetailModal);
         const videoInfoModalInstance = new bootstrap.Modal(elements.videoInfoModal);
+        const videoAnalyticsModalInstance = new bootstrap.Modal(elements.videoAnalyticsModal);
+
+        // Çoklu / İç İçe Modallar İçin Dinamik Z-Index ve Backdrop Yönetimi
+        document.addEventListener('show.bs.modal', (e) => {
+            const currentModal = e.target;
+            const openModals = Array.from(document.querySelectorAll('.modal.show')).filter(m => m !== currentModal);
+            if (openModals.length > 0) {
+                const highestZIndex = Math.max(...openModals.map(m => parseInt(window.getComputedStyle(m).zIndex) || 1055));
+                const newZIndex = Math.max(1075, highestZIndex + 20);
+                currentModal.style.zIndex = newZIndex;
+                setTimeout(() => {
+                    const backdrops = document.querySelectorAll('.modal-backdrop.show');
+                    if (backdrops.length > 1) {
+                        // Yeni modalın backdrop'unu önceki modalın üstüne yerleştir
+                        backdrops[backdrops.length - 1].style.zIndex = newZIndex - 5;
+                    }
+                }, 15);
+            }
+        });
+
+        document.addEventListener('hidden.bs.modal', (e) => {
+            e.target.style.zIndex = '';
+            // Eğer arkada hala açık bir modal varsa scroll ve body kilidini koru
+            if (document.querySelectorAll('.modal.show').length > 0) {
+                document.body.classList.add('modal-open');
+            }
+        });
 
         document.addEventListener('DOMContentLoaded', async () => {
             elements.apiBaseUrlInput.value = state.apiBaseUrl;
@@ -2039,11 +2198,13 @@
             const btnExportDatabase = document.getElementById('btnExportDatabase');
             if (btnExportDatabase) btnExportDatabase.addEventListener('click', exportHandler);
 
-            elements.btnSwitchToAuthorizedUser.addEventListener('click', () => {
-                const authorizedUser = state.personeller.find(p => p.videoYukleyebilir && p.durum === 'Aktif');
-                if (authorizedUser) setActivePersonel(authorizedUser.id);
-                else switchTab('personel');
-            });
+            if (elements.btnSwitchToAuthorizedUser) {
+                elements.btnSwitchToAuthorizedUser.addEventListener('click', () => {
+                    const authorizedUser = state.personeller.find(p => p.videoYukleyebilir && p.durum === 'Aktif');
+                    if (authorizedUser) setActivePersonel(authorizedUser.id);
+                    else switchTab('personel');
+                });
+            }
             elements.btnRefreshAnalytics.addEventListener('click', () => renderVideoAnalyticsSection());
         }
 
@@ -2274,17 +2435,15 @@
             if (!record) {
                 record = new VideoAnalitik({
                     videoId: state.selectedVideoId,
-                    videoTitle: currentTitle,
-                    videoUploader: video.uploadedBy || 'Anonim',
                     izleyenPersonelId: activeUser.id,
-                    izleyenPersonelAd: activeUser.adSoyad,
-                    izleyenDepartman: activeUser.departman,
                     toplamVideoSuresi: video.durationSeconds || 0,
                     oynatmaHizi: elements.mainVideoPlayer.playbackRate || 1
                 });
                 await ClientDB.saveAnalytics(record);
-            } else if (record.videoTitle !== currentTitle) {
-                record.videoTitle = currentTitle;
+                record.videoTitle = video.baslik || video.originalFileName || 'Eğitim Videosu';
+                record.videoUploader = video.yukleyenPersonelAd || 'Eğitmen';
+                record.izleyenPersonelAd = activeUser.adSoyad;
+                record.izleyenDepartman = activeUser.departman;
             }
 
             state.telemetry.currentRecord = record;
@@ -2326,14 +2485,21 @@
             // Sadece videoyu yükleyen kişi analitikleri görebilir (ID ve isim eşleşmesi)
             const isUploader = isVideoUploader(video, activeUser);
 
+            const lockedBox = document.getElementById('analyticsLockedBox');
+            const authorizedBox = document.getElementById('analyticsAuthorizedBox');
+            const lockedUploaderText = document.getElementById('lockedUploaderNameText');
+
             if (!isUploader) {
-                if (elements.videoAnalyticsWrapper) elements.videoAnalyticsWrapper.classList.add('d-none');
-                elements.analyticsAuthorizedBox.classList.add('d-none');
+                if (lockedBox) lockedBox.classList.remove('d-none');
+                if (lockedUploaderText) {
+                    lockedUploaderText.textContent = video.uploadedBy || video.yukleyenPersonelAd || 'Eğitmen';
+                }
+                if (authorizedBox) authorizedBox.classList.add('d-none');
                 return;
             }
 
-            if (elements.videoAnalyticsWrapper) elements.videoAnalyticsWrapper.classList.remove('d-none');
-            elements.analyticsAuthorizedBox.classList.remove('d-none');
+            if (lockedBox) lockedBox.classList.add('d-none');
+            if (authorizedBox) authorizedBox.classList.remove('d-none');
 
             // SQLite'tan sadece bu videoya ait analitik kayıtlarını çek
             let records = await ClientDB.getAnalyticsByVideoId(video.id);
@@ -2521,8 +2687,8 @@
                 if (elements.sidebarUserDept) elements.sidebarUserDept.textContent = 'Lütfen personel ekleyin';
                 if (elements.sidebarUserPermissionDisplay) elements.sidebarUserPermissionDisplay.innerHTML = `<span class="badge bg-secondary">Personel Yok</span>`;
                 elements.activeUserListOptions.innerHTML = '<li class="dropdown-item small text-muted">Kayıtlı personel bulunamadı.</li>';
-                elements.permissionWarningBanner.classList.remove('d-none');
-                elements.warnUserName.textContent = 'Tanımsız';
+                if (elements.permissionWarningBanner) elements.permissionWarningBanner.classList.remove('d-none');
+                if (elements.warnUserName) elements.warnUserName.textContent = 'Tanımsız';
                 elements.btnNavbarUpload.classList.add('btn-secondary');
                 elements.btnNavbarUpload.classList.remove('btn-success');
                 return;
@@ -2542,14 +2708,14 @@
             if (user.videoYukleyebilir) {
                 elements.activeUserPermission.innerHTML = `<span class="text-success"><i class="bi bi-shield-check"></i> Video Yükleyebilir</span>`;
                 elements.activeUserAvatar.classList.remove('unauthorized');
-                elements.permissionWarningBanner.classList.add('d-none');
+                if (elements.permissionWarningBanner) elements.permissionWarningBanner.classList.add('d-none');
                 elements.btnNavbarUpload.classList.remove('btn-secondary');
                 elements.btnNavbarUpload.classList.add('btn-success');
             } else {
                 elements.activeUserPermission.innerHTML = `<span class="text-warning"><i class="bi bi-shield-x"></i> Sadece İzleyici</span>`;
                 elements.activeUserAvatar.classList.add('unauthorized');
-                elements.permissionWarningBanner.classList.remove('d-none');
-                elements.warnUserName.textContent = user.adSoyad;
+                if (elements.permissionWarningBanner) elements.permissionWarningBanner.classList.remove('d-none');
+                if (elements.warnUserName) elements.warnUserName.textContent = user.adSoyad;
                 elements.btnNavbarUpload.classList.remove('btn-success');
                 elements.btnNavbarUpload.classList.add('btn-secondary');
             }
@@ -2831,10 +2997,7 @@
                                     fileSizeBytes: state.selectedFile.size,
                                     status: 1,
                                     statusText: 'Processing',
-                                    uploaderId: u?.id || '',
-                                    uploadedBy: u ? `${u.adSoyad} (${u.departman})` : '',
                                     yukleyenPersonelId: u?.id || '',
-                                    yukleyenPersonelAd: u?.adSoyad || '',
                                     yuklemeTarihi: new Date().toISOString()
                                 }));
 
@@ -3141,6 +3304,19 @@
             if (elements.btnOpenVideoInfoModal) {
                 elements.btnOpenVideoInfoModal.addEventListener('click', () => {
                     videoInfoModalInstance.show();
+                });
+            }
+
+            // Video Analitik Modalı (Öğrenci İzleme & Sınav Analitikleri)
+            if (elements.btnOpenAnalyticsModal) {
+                elements.btnOpenAnalyticsModal.addEventListener('click', async () => {
+                    const cur = state.videos.find(v => v.id === state.selectedVideoId);
+                    const plItem = state.playlistItems.find(it => it.videoId === state.selectedVideoId);
+                    if (elements.modalAnalyticsVideoTitle) {
+                        elements.modalAnalyticsVideoTitle.textContent = plItem?.baslik || cur?.originalFileName || '';
+                    }
+                    await renderVideoAnalyticsSection();
+                    videoAnalyticsModalInstance.show();
                 });
             }
 
@@ -4099,8 +4275,6 @@
                 testId: test.id,
                 videoId: state.selectedVideoId,
                 personelId: activeUser?.id || 'anonim',
-                personelAd: activeUser?.adSoyad || 'Öğrenci',
-                personelDepartman: activeUser?.departman || 'Genel',
                 puan: score,
                 dogruSayisi: correctCount,
                 yanlisSayisi: wrongCount,
@@ -4207,8 +4381,6 @@
                     testId: state.activeInVideoTest.id,
                     videoId: state.selectedVideoId,
                     personelId: activeUser.id,
-                    personelAd: activeUser.adSoyad,
-                    personelDepartman: activeUser.departman,
                     puan: isCorrect ? 100 : 0,
                     dogruSayisi: isCorrect ? 1 : 0,
                     yanlisSayisi: isCorrect ? 0 : 1,

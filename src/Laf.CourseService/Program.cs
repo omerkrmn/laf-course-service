@@ -36,6 +36,15 @@ builder.WebHost.ConfigureKestrel(options =>
     options.Limits.MaxRequestBodySize = 524_288_000;
 });
 
+// Configure IIS In-Process large file upload limits
+builder.Services.Configure<IISServerOptions>(options =>
+{
+    options.MaxRequestBodySize = 524_288_000;
+});
+
+// Configure In-Memory Cache Tracker for HIT/MISS status
+builder.Services.AddMemoryCache();
+
 // Configure CORS for web video players (Video.js, HLS.js, Plyr, etc.)
 builder.Services.AddCors(options =>
 {
@@ -43,7 +52,8 @@ builder.Services.AddCors(options =>
     {
         policy.AllowAnyOrigin()
               .AllowAnyHeader()
-              .AllowAnyMethod();
+              .AllowAnyMethod()
+              .WithExposedHeaders("X-Cache-Status", "Content-Range", "Accept-Ranges");
     });
 });
 
@@ -52,36 +62,30 @@ builder.Services.AddOpenApi();
 
 var app = builder.Build();
 
-// Ensure SQLite Database is initialized
+// Ensure SQLite database & tables exist on startup
 using (var scope = app.Services.CreateScope())
 {
-    var dbContext = scope.ServiceProvider.GetRequiredService<MediaDbContext>();
-    dbContext.Database.EnsureCreated();
-    try
-    {
-        dbContext.Database.ExecuteSqlRaw("ALTER TABLE Videos ADD COLUMN UploaderId TEXT DEFAULT '';");
-    }
-    catch
-    {
-        // Column already exists, safe to ignore
-    }
-}
-{
-    app.MapOpenApi();
+    var db = scope.ServiceProvider.GetRequiredService<MediaDbContext>();
+    db.Database.EnsureCreated();
 }
 
 app.UseCors();
 
-// Root API Health & Info
 app.MapGet("/", () => Results.Ok(new
 {
     service = "LAF Course Video & HLS Streaming API",
     status = "Online",
     version = "1.0.0",
+    test_dashboard = "/test",
     docs = "/openapi/v1.json"
 }))
 .WithName("RootInfo")
 .ExcludeFromDescription();
+
+// Interactive HTML5 & HLS Test / Player Dashboard
+app.MapGet("/test", () => Results.Content(TestPlayerHtml.Content, "text/html"))
+    .WithName("TestPlayer")
+    .ExcludeFromDescription();
 
 // Map Minimal API Endpoints
 app.MapVideoEndpoints();

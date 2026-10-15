@@ -1,15 +1,3 @@
-/**
- * LAF Course Client - SQLite Veritabanı Yöneticisi (db.js)
- * WebAssembly (sql.js) tabanlı 3. Normal Form (3NF) TAM İLİŞKİSEL SQLite Motoru.
- * 
- * Normalizasyon İlkeleri (3NF):
- * 1. Tekrarlayan veriler (Personel adı, departman, video başlığı vb.) alt tablolarda saklanmaz.
- * 2. Tablolar sadece kendi birincil anahtarlarına ait öznitelikleri ve yabancı anahtarları (FK) barındırır.
- * 3. Analitikler, Oynatma Listeleri ve Test Sonuçları ihtiyaç duydukları üst verileri dinamik SQL JOIN ile çeker.
- * 4. CASCADE kısıtlamaları sayesinde ilişkisel bütünlük garantilidir.
- * 5. Eski/denormalize veritabanları otomatik olarak veri kaybı olmadan 3NF şemaya yükseltilir.
- */
-
 const SQLITE_STORAGE_KEY = 'laf_sqlite_database_bin';
 
 const ClientDB = {
@@ -43,26 +31,14 @@ const ClientDB = {
         // 3. SQLite Foreign Key Desteğini Aktifleştir
         this.db.run('PRAGMA foreign_keys = ON;');
 
-        // 4. Tabloları oluştur ve gerekiyorsa 3NF şemaya yükselt
-        this._setupRelationalSchema();
-
-        // 5. Boş ise başlangıç örnek verilerini ekle
-        this._seedInitialData();
-
-        return this.db;
-    },
-
-    _setupRelationalSchema() {
-        // 1. Standart normalize tabloları oluştur (yoksa)
+        // 4. Tabloları oluştur
         this._createTables();
 
-        // 2. Eski veritabanlarında denormalize sütunlar varsa 3NF'e dönüştür
-        this._normalizeSchemaIfNeeded();
-
-        // 3. Foreign Key ve Performans İndeksleri
-        this.db.run('PRAGMA foreign_keys = ON;');
+        // 5. Performans İndeksleri
         this._createIndices();
         this.persist();
+
+        return this.db;
     },
 
     _createTables() {
@@ -80,7 +56,7 @@ const ClientDB = {
                 kayitTarihi TEXT NOT NULL
             );
 
-            -- 2. MASTER VİDEOLAR TABLOSU (Normalize: yukleyenPersonelAd Personeller tablosundan JOIN edilir)
+            -- 2. MASTER VİDEOLAR TABLOSU (3NF: yukleyenPersonelId FK)
             CREATE TABLE IF NOT EXISTS Videolar (
                 id TEXT PRIMARY KEY,
                 originalFileName TEXT NOT NULL,
@@ -101,7 +77,7 @@ const ClientDB = {
                 FOREIGN KEY (yukleyenPersonelId) REFERENCES Personeller(id) ON DELETE SET NULL
             );
 
-            -- 3. MASTER OYNATMA LİSTELERİ (Normalize: olusturanPersonelAd Personeller tablosundan JOIN edilir)
+            -- 3. MASTER OYNATMA LİSTELERİ (3NF: olusturanPersonelId FK)
             CREATE TABLE IF NOT EXISTS OynatmaListeleri (
                 id TEXT PRIMARY KEY,
                 baslik TEXT NOT NULL,
@@ -111,7 +87,7 @@ const ClientDB = {
                 FOREIGN KEY (olusturanPersonelId) REFERENCES Personeller(id) ON DELETE CASCADE
             );
 
-            -- 4. OYNATMA LİSTESİ ÖGELERİ (ARA İLİŞKİ VARLIĞI / JUNCTION TABLE)
+            -- 4. OYNATMA LİSTESİ ÖGELERİ (JUNCTION TABLE)
             CREATE TABLE IF NOT EXISTS OynatmaListesiOgeleri (
                 id TEXT PRIMARY KEY,
                 oynatmaListesiId TEXT NOT NULL,
@@ -125,7 +101,7 @@ const ClientDB = {
                 UNIQUE(oynatmaListesiId, videoId)
             );
 
-            -- 5. VİDEO ANALİTİKLERİ & TELEMETRİ (Normalize: videoTitle, videoUploader, izleyenPersonelAd, izleyenDepartman JOIN edilir)
+            -- 5. VİDEO ANALİTİKLERİ & TELEMETRİ (3NF: videoId ve izleyenPersonelId FK)
             CREATE TABLE IF NOT EXISTS VideoAnalitikleri (
                 id TEXT PRIMARY KEY,
                 videoId TEXT NOT NULL,
@@ -150,7 +126,7 @@ const ClientDB = {
                 UNIQUE(videoId, izleyenPersonelId)
             );
 
-            -- 6. VİDEO DEĞERLENDİRME TESTLERİ
+            -- 6. VİDEO DEĞERLENDİRME TESTLERİ (3NF: videoId ve olusturanPersonelId FK)
             CREATE TABLE IF NOT EXISTS VideoTestleri (
                 id TEXT PRIMARY KEY,
                 videoId TEXT NOT NULL,
@@ -167,7 +143,7 @@ const ClientDB = {
                 FOREIGN KEY (olusturanPersonelId) REFERENCES Personeller(id) ON DELETE SET NULL
             );
 
-            -- 7. ÖĞRENCİ TEST SONUÇLARI (Normalize: personelAd, personelDepartman Personeller tablosundan JOIN edilir)
+            -- 7. ÖĞRENCİ TEST SONUÇLARI (3NF: testId, videoId, personelId FK)
             CREATE TABLE IF NOT EXISTS TestSonuclari (
                 id TEXT PRIMARY KEY,
                 testId TEXT NOT NULL,
@@ -204,176 +180,6 @@ const ClientDB = {
         }
     },
 
-    _normalizeSchemaIfNeeded() {
-        try {
-            let needsNormalization = false;
-
-            // Kontrol 1: VideoAnalitikleri'nde gereksiz denormalize kolonlar var mı?
-            if (this._tableExists('VideoAnalitikleri')) {
-                const cols = this._getTableColumns('VideoAnalitikleri');
-                if (cols.includes('videoTitle') || cols.includes('izleyenPersonelAd') || cols.includes('izleyenDepartman') || cols.includes('videoUploader')) {
-                    needsNormalization = true;
-                }
-            }
-
-            // Kontrol 2: Videolar'da yukleyenPersonelAd var mı?
-            if (this._tableExists('Videolar')) {
-                const cols = this._getTableColumns('Videolar');
-                if (cols.includes('yukleyenPersonelAd')) {
-                    needsNormalization = true;
-                }
-            }
-
-            // Kontrol 3: OynatmaListeleri'nde olusturanPersonelAd var mı?
-            if (this._tableExists('OynatmaListeleri')) {
-                const cols = this._getTableColumns('OynatmaListeleri');
-                if (cols.includes('olusturanPersonelAd')) {
-                    needsNormalization = true;
-                }
-            }
-
-            // Kontrol 4: TestSonuclari'nda personelAd veya personelDepartman var mı?
-            if (this._tableExists('TestSonuclari')) {
-                const cols = this._getTableColumns('TestSonuclari');
-                if (cols.includes('personelAd') || cols.includes('personelDepartman')) {
-                    needsNormalization = true;
-                }
-            }
-
-            if (!needsNormalization) return;
-
-            console.log('[ClientDB] Veritabanı 3. Normal Form (3NF) normalize şemaya dönüştürülüyor...');
-
-            // 1. Önce eski verilerdeki uploaderId eksikliklerini Personeller üzerinden eşle
-            if (this._tableExists('Videolar') && this._tableExists('Personeller')) {
-                try {
-                    const vCols = this._getTableColumns('Videolar');
-                    if (vCols.includes('yukleyenPersonelAd')) {
-                        this.db.run(`
-                            UPDATE Videolar 
-                            SET yukleyenPersonelId = (
-                                SELECT p.id FROM Personeller p 
-                                WHERE Videolar.yukleyenPersonelAd LIKE '%' || p.adSoyad || '%' 
-                                   OR p.adSoyad LIKE '%' || Videolar.yukleyenPersonelAd || '%' 
-                                LIMIT 1
-                            )
-                            WHERE (yukleyenPersonelId IS NULL OR yukleyenPersonelId = '') 
-                              AND yukleyenPersonelAd IS NOT NULL 
-                              AND yukleyenPersonelAd != '';
-                        `);
-                    }
-                } catch (e) {
-                    console.warn('[ClientDB] Otomatik uploaderId eşleme uyarısı:', e);
-                }
-            }
-
-            // 2. Videolar Tablosunu Normalize Et (yukleyenPersonelAd kaldırıldı)
-            this._recreateTableWithFK('Videolar', `
-                CREATE TABLE Videolar_norm (
-                    id TEXT PRIMARY KEY,
-                    originalFileName TEXT NOT NULL,
-                    baslik TEXT,
-                    fileSizeBytes REAL DEFAULT 0,
-                    durationSeconds REAL DEFAULT 0,
-                    manifestUrl TEXT,
-                    thumbnailUrl TEXT,
-                    status INTEGER DEFAULT 0,
-                    statusText TEXT DEFAULT 'Pending',
-                    resolution TEXT,
-                    videoCodec TEXT,
-                    audioCodec TEXT,
-                    bitrate REAL DEFAULT 0,
-                    frameRate REAL DEFAULT 0,
-                    yukleyenPersonelId TEXT,
-                    yuklemeTarihi TEXT NOT NULL,
-                    FOREIGN KEY (yukleyenPersonelId) REFERENCES Personeller(id) ON DELETE SET NULL
-                );
-            `, 'Videolar_norm');
-
-            // 3. OynatmaListeleri Tablosunu Normalize Et (olusturanPersonelAd kaldırıldı)
-            this._recreateTableWithFK('OynatmaListeleri', `
-                CREATE TABLE OynatmaListeleri_norm (
-                    id TEXT PRIMARY KEY,
-                    baslik TEXT NOT NULL,
-                    aciklama TEXT,
-                    olusturanPersonelId TEXT NOT NULL,
-                    olusturmaTarihi TEXT NOT NULL,
-                    FOREIGN KEY (olusturanPersonelId) REFERENCES Personeller(id) ON DELETE CASCADE
-                );
-            `, 'OynatmaListeleri_norm');
-
-            // 4. VideoAnalitikleri Tablosunu Normalize Et (videoTitle, videoUploader, izleyenPersonelAd, izleyenDepartman kaldırıldı)
-            this._recreateTableWithFK('VideoAnalitikleri', `
-                CREATE TABLE VideoAnalitikleri_norm (
-                    id TEXT PRIMARY KEY,
-                    videoId TEXT NOT NULL,
-                    izleyenPersonelId TEXT NOT NULL,
-                    izlendiMi INTEGER NOT NULL DEFAULT 0,
-                    toplamVideoSuresi REAL DEFAULT 0,
-                    sonPozisyon REAL DEFAULT 0,
-                    netIzlemeSuresi REAL DEFAULT 0,
-                    izlenenMaksimumSaniye REAL DEFAULT 0,
-                    tamamlanmaOrani INTEGER DEFAULT 0,
-                    durum TEXT DEFAULT 'Başlamadı',
-                    oynatmaHizi REAL DEFAULT 1,
-                    atladiMi INTEGER DEFAULT 0,
-                    atlamaSayisi INTEGER DEFAULT 0,
-                    atlamaGecmisiJson TEXT,
-                    altTabSayisi INTEGER DEFAULT 0,
-                    altTabGecmisiJson TEXT,
-                    toplamOdakDisiSure REAL DEFAULT 0,
-                    sonIzlemeTarihi TEXT,
-                    FOREIGN KEY (videoId) REFERENCES Videolar(id) ON DELETE CASCADE,
-                    FOREIGN KEY (izleyenPersonelId) REFERENCES Personeller(id) ON DELETE CASCADE,
-                    UNIQUE(videoId, izleyenPersonelId)
-                );
-            `, 'VideoAnalitikleri_norm');
-
-            // 5. TestSonuclari Tablosunu Normalize Et (personelAd, personelDepartman kaldırıldı)
-            this._recreateTableWithFK('TestSonuclari', `
-                CREATE TABLE TestSonuclari_norm (
-                    id TEXT PRIMARY KEY,
-                    testId TEXT NOT NULL,
-                    videoId TEXT NOT NULL,
-                    personelId TEXT NOT NULL,
-                    puan REAL NOT NULL DEFAULT 0,
-                    dogruSayisi INTEGER NOT NULL DEFAULT 0,
-                    yanlisSayisi INTEGER NOT NULL DEFAULT 0,
-                    toplamSoru INTEGER NOT NULL DEFAULT 0,
-                    gectiMi INTEGER NOT NULL DEFAULT 0,
-                    verilenCevaplarJson TEXT,
-                    tamamlanmaTarihi TEXT NOT NULL,
-                    FOREIGN KEY (testId) REFERENCES VideoTestleri(id) ON DELETE CASCADE,
-                    FOREIGN KEY (videoId) REFERENCES Videolar(id) ON DELETE CASCADE,
-                    FOREIGN KEY (personelId) REFERENCES Personeller(id) ON DELETE CASCADE
-                );
-            `, 'TestSonuclari_norm');
-
-            console.log('[ClientDB] Normalizasyon başarıyla tamamlandı. Artık tüm tablolar 3NF uyumlu.');
-        } catch (normErr) {
-            console.error('[ClientDB] Normalizasyon hatası:', normErr);
-        }
-    },
-
-    _recreateTableWithFK(tableName, createTableSql, tempName) {
-        try {
-            const exists = this._tableExists(tableName);
-            this.db.run(createTableSql);
-            if (exists) {
-                const cols = this._getTableColumns(tableName);
-                const targetCols = this._getTableColumns(tempName);
-                const common = cols.filter(c => targetCols.includes(c));
-                if (common.length > 0) {
-                    const colStr = common.join(', ');
-                    this.db.run(`INSERT OR IGNORE INTO ${tempName} (${colStr}) SELECT ${colStr} FROM ${tableName}`);
-                }
-                this.db.run(`DROP TABLE ${tableName}`);
-            }
-            this.db.run(`ALTER TABLE ${tempName} RENAME TO ${tableName}`);
-        } catch (err) {
-            console.error(`[ClientDB] ${tableName} tablosu dönüştürülemedi:`, err);
-        }
-    },
 
     _tableExists(tableName) {
         try {
@@ -390,7 +196,7 @@ const ClientDB = {
             if (res && res.length > 0 && res[0].values) {
                 return res[0].values.map(r => r[1]);
             }
-        } catch {}
+        } catch { }
         return [];
     },
 
@@ -473,7 +279,6 @@ const ClientDB = {
     },
 
     async deletePersonel(id) {
-        // CASCADE sayesinde bu personele bağlı kayıtlar otomatik temizlenir
         this.db.run('DELETE FROM Personeller WHERE id = ?', [id]);
         this.persist();
     },
@@ -646,7 +451,7 @@ const ClientDB = {
             pl.id,
             pl.baslik,
             pl.aciklama || '',
-            pl.olusturanPersonelId || 'p-ahmet-0001',
+            pl.olusturanPersonelId,
             pl.olusturmaTarihi || new Date().toISOString()
         ]);
         this.persist();
@@ -664,12 +469,11 @@ const ClientDB = {
     },
 
     async deletePlaylist(id) {
-        // ON DELETE CASCADE sayesinde bağlı tüm OynatmaListesiOgeleri otomatik silinir
         this.db.run('DELETE FROM OynatmaListeleri WHERE id = ?', [id]);
         this.persist();
     },
 
-    // --- OYNATMA LİSTESİ ÖGELERİ (ARA İLİŞKİ VARLIĞI - VİDEOLAR & PERSONEL JOINLİ) ---
+    // --- OYNATMA LİSTESİ ÖGELERİ (ARA İLİŞKİ VARLIĞI - JOINLİ) ---
     async getPlaylistItems(playlistId) {
         const stmt = this.db.prepare(`
             SELECT 
@@ -693,7 +497,6 @@ const ClientDB = {
                 v.frameRate,
                 v.yukleyenPersonelId,
                 COALESCE(p.adSoyad, '') AS yukleyenPersonelAd,
-                COALESCE(p.adSoyad, '') AS uploadedBy,
                 v.yuklemeTarihi
             FROM OynatmaListesiOgeleri o
             INNER JOIN Videolar v ON o.videoId = v.id
@@ -806,7 +609,6 @@ const ClientDB = {
                 v.frameRate,
                 v.yukleyenPersonelId,
                 COALESCE(p.adSoyad, '') AS yukleyenPersonelAd,
-                COALESCE(p.adSoyad, '') AS uploadedBy,
                 v.yuklemeTarihi
             FROM OynatmaListesiOgeleri o
             INNER JOIN Videolar v ON o.videoId = v.id
@@ -832,9 +634,7 @@ const ClientDB = {
         const stmt = this.db.prepare(`
             SELECT 
                 v.*,
-                COALESCE(p.adSoyad, '') AS yukleyenPersonelAd,
-                COALESCE(p.adSoyad, '') AS uploadedBy,
-                v.yukleyenPersonelId AS uploaderId
+                COALESCE(p.adSoyad, '') AS yukleyenPersonelAd
             FROM Videolar v
             LEFT JOIN Personeller p ON v.yukleyenPersonelId = p.id
             ORDER BY v.yuklemeTarihi DESC
@@ -851,9 +651,7 @@ const ClientDB = {
         const stmt = this.db.prepare(`
             SELECT 
                 v.*,
-                COALESCE(p.adSoyad, '') AS yukleyenPersonelAd,
-                COALESCE(p.adSoyad, '') AS uploadedBy,
-                v.yukleyenPersonelId AS uploaderId
+                COALESCE(p.adSoyad, '') AS yukleyenPersonelAd
             FROM Videolar v
             LEFT JOIN Personeller p ON v.yukleyenPersonelId = p.id
             WHERE v.id = ? 
@@ -869,7 +667,6 @@ const ClientDB = {
     },
 
     async saveVideo(v) {
-        // 3NF: yukleyenPersonelAd kaydedilmez, Personeller tablosundaki ID üzerinden referans verilir
         this.db.run(`
             INSERT OR REPLACE INTO Videolar (
                 id, originalFileName, baslik, fileSizeBytes, durationSeconds,
@@ -892,7 +689,7 @@ const ClientDB = {
             v.audioCodec || '',
             Number(v.bitrate) || 0,
             Number(v.frameRate) || 0,
-            (v.uploaderId || v.yukleyenPersonelId) ? (v.uploaderId || v.yukleyenPersonelId) : null,
+            v.yukleyenPersonelId ? v.yukleyenPersonelId : null,
             v.yuklemeTarihi || new Date().toISOString()
         ]);
         this.persist();
@@ -900,7 +697,6 @@ const ClientDB = {
     },
 
     async deleteVideo(id) {
-        // ON DELETE CASCADE sayesinde bağlı oynatma listesi ögeleri, analitikler ve testler otomatik temizlenir
         this.db.run('DELETE FROM Videolar WHERE id = ?', [id]);
         this.persist();
     },
@@ -910,11 +706,10 @@ const ClientDB = {
 
         const serverVideoIds = new Set(serverVideos.map(sv => sv.id));
 
-        // 1. Sunucudan silinmiş videoları yerel SQLite'tan kaldır (Cascade ile bağlı kayıtlar temizlenir)
+        // 1. Sunucudan silinmiş videoları yerel SQLite'tan kaldır
         const localVideos = await this.getAllVideos();
         for (const lv of localVideos) {
             if (!serverVideoIds.has(lv.id)) {
-                console.log(`[ClientDB] Sunucuda silinmiş video yerel veritabanından kaldırılıyor (Cascade): ${lv.id}`);
                 this.db.run('DELETE FROM Videolar WHERE id = ?', [lv.id]);
             }
         }
@@ -923,10 +718,10 @@ const ClientDB = {
         const allPersonels = await this.getAllPersonel();
         for (const sv of serverVideos) {
             const existing = await this.getVideoById(sv.id);
-            let uploaderId = sv.uploaderId || existing?.uploaderId || existing?.yukleyenPersonelId || null;
-            const uploaderAd = sv.uploadedBy || existing?.uploadedBy || existing?.yukleyenPersonelAd || '';
+            let uploaderId = sv.uploaderId || existing?.yukleyenPersonelId || null;
+            const uploaderAd = sv.uploadedBy || existing?.yukleyenPersonelAd || '';
 
-            // uploaderId boş ise personeller arasından ad ile otomatik eşle (ilişkisel bütünlük)
+            // uploaderId boş ise personeller arasından ad ile otomatik eşle
             if (!uploaderId && uploaderAd) {
                 const matched = allPersonels.find(p =>
                     uploaderAd.toLowerCase().includes(p.adSoyad.toLowerCase()) ||
@@ -952,10 +747,7 @@ const ClientDB = {
                 audioCodec: sv.audioCodec || existing?.audioCodec || '',
                 bitrate: sv.bitrate ?? existing?.bitrate ?? 0,
                 frameRate: sv.frameRate ?? existing?.frameRate ?? 0,
-                uploaderId: uploaderId,
-                uploadedBy: uploaderAd,
                 yukleyenPersonelId: uploaderId,
-                yukleyenPersonelAd: uploaderAd,
                 yuklemeTarihi: sv.createdAt || existing?.yuklemeTarihi || new Date().toISOString()
             });
             await this.saveVideo(vk);
@@ -1030,7 +822,7 @@ const ClientDB = {
     },
 
     async saveTestResult(r) {
-        // 3NF: personelAd ve personelDepartman TestSonuclari tablosuna yazılmaz; Personeller'den JOIN edilir
+        // 3NF: personelAd ve departman TestSonuclari tablosuna yazılmaz; Personeller'den JOIN edilir
         this.db.run(`
             INSERT OR REPLACE INTO TestSonuclari (
                 id, testId, videoId, personelId, puan, dogruSayisi, yanlisSayisi, toplamSoru, gectiMi, verilenCevaplarJson, tamamlanmaTarihi
@@ -1119,10 +911,10 @@ const ClientDB = {
         return result;
     },
 
-    // --- PARSER VE YARDIMCI METOTLAR ---
+    // --- PARSER YARDIMCILARI ---
     _parseTestRow(row) {
         let sorular = [];
-        try { if (row.sorularJson) sorular = JSON.parse(row.sorularJson); } catch {}
+        try { if (row.sorularJson) sorular = JSON.parse(row.sorularJson); } catch { }
         return new VideoTest({
             ...row,
             zorunluMu: Boolean(row.zorunluMu),
@@ -1132,7 +924,7 @@ const ClientDB = {
 
     _parseTestResultRow(row) {
         let verilenCevaplar = [];
-        try { if (row.verilenCevaplarJson) verilenCevaplar = JSON.parse(row.verilenCevaplarJson); } catch {}
+        try { if (row.verilenCevaplarJson) verilenCevaplar = JSON.parse(row.verilenCevaplarJson); } catch { }
         return new TestSonucu({
             ...row,
             gectiMi: Boolean(row.gectiMi),
@@ -1143,8 +935,8 @@ const ClientDB = {
     _parseAnalyticsRow(row) {
         let atlamaGecmisi = [];
         let altTabGecmisi = [];
-        try { if (row.atlamaGecmisiJson) atlamaGecmisi = JSON.parse(row.atlamaGecmisiJson); } catch {}
-        try { if (row.altTabGecmisiJson) altTabGecmisi = JSON.parse(row.altTabGecmisiJson); } catch {}
+        try { if (row.atlamaGecmisiJson) atlamaGecmisi = JSON.parse(row.atlamaGecmisiJson); } catch { }
+        try { if (row.altTabGecmisiJson) altTabGecmisi = JSON.parse(row.altTabGecmisiJson); } catch { }
 
         return new VideoAnalitik({
             ...row,
@@ -1153,17 +945,6 @@ const ClientDB = {
             atlamaGecmisi,
             altTabGecmisi
         });
-    },
-
-    resetDatabase() {
-        localStorage.removeItem(SQLITE_STORAGE_KEY);
-        this.db = new this.sqlite.Database();
-        this.db.run('PRAGMA foreign_keys = ON;');
-        this._createTables();
-        this._createIndices();
-        this._seedInitialData();
-        this.persist();
-        return this.db;
     },
 
     exportDatabaseFile(filename = 'laf_course_database.sqlite') {
@@ -1191,12 +972,10 @@ const ClientDB = {
     },
 
     /**
-     * Tüm veritabanını drop eder / tamamen sıfırlar (Clean Slate / 0'dan Başlatma).
-     * Bütün tabloları siler (DROP TABLE), şemayı tertemiz boş olarak yeniden oluşturur.
-     * Fake verileri kesinlikle YÜKLEMEZ.
+     * Tüm veritabanını drop eder / tamamen sıfırlar.
      */
     async dropDatabase() {
-        console.warn('[ClientDB] Tüm veritabanı drop ediliyor (DROP TABLE ALL)...');
+        console.warn('[ClientDB] Tüm veritabanı drop ediliyor...');
         localStorage.removeItem(SQLITE_STORAGE_KEY);
         localStorage.removeItem('laf_active_personel_id');
 
@@ -1207,7 +986,12 @@ const ClientDB = {
             'OynatmaListesiOgeleri',
             'OynatmaListeleri',
             'Videolar',
-            'Personeller'
+            'Personeller',
+            // Olası eski _norm tabloları
+            'TestSonuclari_norm',
+            'VideoAnalitikleri_norm',
+            'OynatmaListeleri_norm',
+            'Videolar_norm'
         ];
 
         try {
@@ -1220,48 +1004,13 @@ const ClientDB = {
             console.warn('[ClientDB] Drop işlemi sırasında uyarı:', e);
         }
 
-        // Sıfırdan temiz boş şemayı oluştur
         this._createTables();
         this._createIndices();
         this.db.run('PRAGMA foreign_keys = ON;');
         this.persist();
 
-        console.log('[ClientDB] Tüm veritabanı başarıyla drop edildi. 0 verili tertemiz başlatıldı.');
+        console.log('[ClientDB] Tüm veritabanı başarıyla drop edildi ve temiz 3NF şema oluşturuldu.');
         return true;
-    },
-
-    _seedInitialData() {
-        // Fake / mock veriler tamamen kaldırıldı.
-        // Veritabanı 0 kayıtla tamamen temiz başlar.
-    },
-
-    /**
-     * İstenirse manuel olarak örnek/test personelleri yüklemek için opsiyonel metot
-     */
-    async seedSampleData() {
-        const initialSeeds = [
-            new Personel({
-                id: 'p-ahmet-0001',
-                adSoyad: 'Ahmet Yılmaz',
-                email: 'ahmet.yilmaz@laf.com',
-                departman: 'Eğitim & Akademi',
-                unvan: 'Kıdemli Eğitmen & Video Koordinatörü',
-                telefon: '+90 532 100 2030',
-                videoYukleyebilir: true
-            }),
-            new Personel({
-                id: 'p-elif-0002',
-                adSoyad: 'Elif Demir',
-                email: 'elif.demir@laf.com',
-                departman: 'Yazılım Geliştirme',
-                unvan: 'Teknik Takım Lideri',
-                telefon: '+90 533 200 3040',
-                videoYukleyebilir: true
-            })
-        ];
-        initialSeeds.forEach(p => this.addPersonel(p));
-        this.persist();
-        console.log('[ClientDB] Örnek personeller yüklendi.');
     },
 
     _uint8ToBase64(u8) {
@@ -1284,7 +1033,7 @@ const ClientDB = {
     }
 };
 
-// Kolay test için doğrudan tarayıcı konsolundan çağrılabilir fonksiyonlar
+// Global erişim
 if (typeof window !== 'undefined') {
     window.dropDatabase = () => ClientDB.dropDatabase();
     window.ClientDB = ClientDB;
